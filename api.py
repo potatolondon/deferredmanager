@@ -14,8 +14,19 @@ def _serializer(obj):
 def serialize_model(obj):
     return json.dumps(db.to_dict(obj), default=_serializer)
 
+def dump(obj):
+    return json.dumps(obj, default=_serializer)
 
 class QueueListHandler(webapp2.RequestHandler):
+    def get(self):
+        ctx = {
+            "queues": map(db.to_dict, QueueState.all())
+        }
+
+        self.response.content_type = "application/json"
+        self.response.write(dump(ctx))
+
+class QueueHandler(webapp2.RequestHandler):
     def get(self, queue_name):
         queue_state = QueueState.get_by_key_name(queue_name)
 
@@ -25,12 +36,12 @@ class QueueListHandler(webapp2.RequestHandler):
 
         tasks = TaskState.all().ancestor(queue_state).order("-deferred_at").fetch(limit=1000)
 
-        ctx = {
-            'tasks': [task.task_name for task in tasks]
-        }
+        ctx = db.to_dict(queue_state)
+
+        ctx['tasks'] = map(db.to_dict, tasks)
 
         self.response.content_type = "application/json"
-        self.response.write(json.dumps(ctx, default=_serializer))
+        self.response.write(dump(ctx))
 
 class TaskInfoHandler(webapp2.RequestHandler):
     def get(self, queue_name, task_name):
@@ -47,5 +58,6 @@ class TaskInfoHandler(webapp2.RequestHandler):
 
 application = webapp2.WSGIApplication([
     ('.+/([\w\d-]+)/([\w\d]+)', TaskInfoHandler),
-    ('.+/([\w\d-]+)', QueueListHandler),
+    ('.+/([\w\d-]+)', QueueHandler),
+    ('.*', QueueListHandler),
 ])
