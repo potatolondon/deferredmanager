@@ -55,9 +55,10 @@ class DeferTaskTests(BaseTest):
         self.assertEqual(task_state.parent().key(), queue_state.key())
 
     def test_unique_task_ref(self):
-        self.assertRaises(AssertionError, defer, noop, unique=True)
-        self.assertTrue(defer(noop, task_reference="project1", unique=True))
-        self.assertFalse(defer(noop, task_reference="project1", unique=True))
+        unique_until = datetime.datetime.utcnow() + datetime.timedelta(days=1)
+        self.assertRaises(AssertionError, defer, noop, unique_until=unique_until)
+        self.assertTrue(defer(noop, task_reference="project1", unique_until=unique_until))
+        self.assertFalse(defer(noop, task_reference="project1", unique_until=unique_until))
 
     def test_args_repr(self):
         task_state = defer(noop, 2, u"bår")
