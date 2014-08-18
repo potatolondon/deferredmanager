@@ -25,6 +25,9 @@ def noop(*args, **kwargs):
 def noop_fail(*args, **kwargs):
     raise Exception
 
+def noop_permanent_fail(*args, **kwargs):
+    raise deferred.PermanentTaskFailure
+
 class Foo(object):
     def bar(self): pass
     def __call__(self): pass
@@ -180,4 +183,16 @@ class HandlerTests(BaseTest):
         self.assertTrue(task_state.is_permanently_failed)
 
     def test_permanent_failure(self):
-        pass
+        task_state = defer(noop_permanent_fail)
+        noop_pickle = deferred.serialize(noop_permanent_fail)
+
+        request = self.make_request("/", task_state.task_name, 'default', POST=noop_pickle)
+        response = request.get_response(application)
+
+        self.assertEqual(response.status_int, 200)
+
+        task_state = self.reload(task_state)
+        self.assertEqual(task_state.retry_count, 0)
+        self.assertTrue(task_state.is_complete)
+        self.assertFalse(task_state.is_running)
+        self.assertTrue(task_state.is_permanently_failed)
