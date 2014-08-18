@@ -37,3 +37,8 @@ Optionally, you can pass the following arguments:
 
 - **task_reference**: an arbitrary reference to allow you to identify the task
 - **unique_until**: a datetime object. If passed then no other tasks with the same task_reference will be allowed to be deferred until after this datetime.
+
+## Limitations
+
+Adding deferred tasks is limited to one task per second per queue. This is because a datastore entity is saved to persist the task state. It is kept in an entity group to ensure that it returned when the task actually runs.
+
