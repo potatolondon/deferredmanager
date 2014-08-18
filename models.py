@@ -72,7 +72,7 @@ class QueueState(db.Model):
         limit = self._get_queueinfo_key("retry_parameters.task_age_limit", None)
 
         if limit:
-            queueinfo.ParseTaskAgeLimit(limit)
+            return queueinfo.ParseTaskAgeLimit(limit)
 
     def get_queue_statistics(self):
         return taskqueue.QueueStatistics.fetch(self.queue)
