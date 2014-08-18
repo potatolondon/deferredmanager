@@ -68,7 +68,7 @@ class DeferTaskTests(BaseTest):
         self.assertEqual(task_state.deferred_args, u"(2, u'b\\xe5r')")
 
     def test_kwargs_repr(self):
-        task_state = defer(noop, foo="bår")
+        task_state = defer(noop, foo="bår", _bar="foo")
         self.assertEqual(task_state.deferred_kwargs, u"{'foo': 'b\\xc3\\xa5r'}")
 
     def test_class_method_repr(self):

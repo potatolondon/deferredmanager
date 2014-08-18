@@ -38,7 +38,7 @@ def defer(obj, *args, **kwargs):
     )
     try:
         taskstate.deferred_args = unicode(args)
-        taskstate.deferred_kwargs = unicode(kwargs)
+        taskstate.deferred_kwargs = unicode(_strip_defer_kwargs(kwargs))
         taskstate.deferred_function = _get_func_repr(obj)
     except:
         pass
@@ -54,6 +54,9 @@ def _get_or_create_queuestate(queue_name):
         queuestate.put()
 
     return queuestate
+
+def _strip_defer_kwargs(kwargs):
+    return {k:v for k,v in kwargs.items() if not k.startswith('_')}
 
 def _get_func_repr(func):
     if isinstance(func, types.MethodType):
