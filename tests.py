@@ -196,3 +196,12 @@ class HandlerTests(BaseTest):
         self.assertTrue(task_state.is_complete)
         self.assertFalse(task_state.is_running)
         self.assertTrue(task_state.is_permanently_failed)
+
+    def test_no_task_state(self):
+        noop_pickle = deferred.serialize(noop)
+
+        request = self.make_request("/", 'task1', 'default', POST=noop_pickle)
+        response = request.get_response(application)
+
+        self.assertEqual(response.status_int, 200)
+

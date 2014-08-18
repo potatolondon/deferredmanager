@@ -22,6 +22,9 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
         queue_state = QueueState.get_by_key_name(queue_name)
         task_state = TaskState.get_by_key_name(task_name, parent=queue_state)
 
+        if not task_state:
+            return super(GAEDeferAdminTaskHandler, self).post()
+
         task_state.is_running = True
         task_state.retry_count = int(self.request.headers['X-AppEngine-TaskExecutionCount'])
 
