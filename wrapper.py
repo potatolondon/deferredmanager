@@ -25,7 +25,7 @@ def defer(obj, *args, **kwargs):
             .ancestor(queuestate)
         )
         if existing_tasks.count(limit=1):
-            logging.warning("Did not defer task with reference {0} - task already present")
+            logging.warning("Did not defer task with reference {0} - task already present".format(task_reference))
             return
 
     task = deferred.defer(obj, *args, **kwargs)
