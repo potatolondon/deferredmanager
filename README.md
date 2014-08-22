@@ -1,11 +1,13 @@
-# GAE Defer Manager (ALPHA)
-\- A library to wrap deferring tasks on the Google App Engine Taskqueue API
+GAE Defer Manager (ALPHA)
+========================
+
+## A library to wrap deferring tasks on the Google App Engine Taskqueue API
 
 gae_defer_manager is a wrapper for the deferred library in the Google App Engine SDK to expose the following functionality:
 
-- Task status
-- Task ETA
-- Allows prevention on duplicate tasks from being added based on an arbitrary reference key
+* Task status
+* Task ETA
+* Allows prevention on duplicate tasks from being added based on an arbitrary reference key
 
 
 ## Setup
@@ -21,8 +23,12 @@ handlers:
     login: admin
     secure: always
 
-  - url: /_ah/deferredapi.*
-    script: gae_defer_manager.api.application
+  - url: /_ah/deferredconsole/static/
+    static_dir: gae_defer_manager/static
+    expiration: 1d
+
+  - url: /_ah/deferredconsole.*
+    script: gae_defer_manager.application
     login: admin
     secure: always
 ```
@@ -38,7 +44,22 @@ Optionally, you can pass the following arguments:
 - **task_reference**: an arbitrary reference to allow you to identify the task
 - **unique_until**: a datetime object. If passed then no other tasks with the same task_reference will be allowed to be deferred until after this datetime.
 
+## Task console
+
+The task console can be found at /_ah/deferredconsole/static/index.html
+
 ## Limitations
 
 Adding deferred tasks is limited to one task per second per queue. This is because a datastore entity is saved to persist the task state. It is kept in an entity group to ensure that it returned when the task actually runs.
 
+Screenshots
+-----------
+
+![screenshot1](/../screenshots/_screenshots/1.png?raw=true)
+![screenshot1](/../screenshots/_screenshots/2.png?raw=true)
+![screenshot1](/../screenshots/_screenshots/3.png?raw=true)
+![screenshot1](/../screenshots/_screenshots/4.png?raw=true)
+![screenshot1](/../screenshots/_screenshots/5.png?raw=true)
+![screenshot1](/../screenshots/_screenshots/6.png?raw=true)
+![screenshot1](/../screenshots/_screenshots/7.png?raw=true)
+![screenshot1](/../screenshots/_screenshots/8.png?raw=true)

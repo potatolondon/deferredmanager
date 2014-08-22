@@ -28,12 +28,15 @@ class TaskState(db.Model):
     is_complete = db.BooleanProperty(default=False)
     is_running = db.BooleanProperty(default=False)
     is_permanently_failed = db.BooleanProperty(default=False)
+    was_purged = db.BooleanProperty(default=False)
     first_run = db.DateTimeProperty(required=False, default=None)
     retry_count = db.IntegerProperty(default=0)
     deferred_function = db.TextProperty()
     deferred_args = db.TextProperty()
     deferred_kwargs = db.TextProperty()
     deferred_at = db.DateTimeProperty(auto_now_add=True)
+
+    request_log_ids = db.StringListProperty()
 
     def __init__(self, *args, **kwargs):
         if 'key' not in kwargs:
@@ -75,5 +78,5 @@ class QueueState(db.Model):
             return queueinfo.ParseTaskAgeLimit(limit)
 
     def get_queue_statistics(self):
-        return taskqueue.QueueStatistics.fetch(self.queue)
+        return taskqueue.QueueStatistics.fetch(self.name)
 

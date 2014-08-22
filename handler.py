@@ -27,6 +27,7 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
 
         task_state.is_running = True
         task_state.retry_count = int(self.request.headers['X-AppEngine-TaskExecutionCount'])
+        task_state.request_log_ids.append(os.environ['REQUEST_LOG_ID'])
 
         if task_state.first_run is None:
             task_state.first_run = datetime.datetime.utcnow()
@@ -47,10 +48,13 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
             logging.exception("Permanent failure attempting to execute task")
             task_state.is_complete = task_state.is_permanently_failed = True
 
-        except:
+        except Exception as e:
+            logging.exception(e)
+
             self.response.set_status(500)
             if not self.should_retry(queue_state, task_state):
                 task_state.is_complete = task_state.is_permanently_failed = True
+                logging.warning("Task has failed {0} times and is {1}s old. It will not be retried.".format(task_state.retry_count, task_state.age))
 
         else:
             task_state.is_complete = True
@@ -64,12 +68,12 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
         # TODO: handle default retry params and task-specific retry params
         if queue_state.retry_limit is not None and queue_state.age_limit is not None:
             return (
-                queue_state.retry_limit >= task_state.retry_count or 
+                queue_state.retry_limit > task_state.retry_count or 
                 queue_state.age_limit >= task_state.age
             )
 
         elif queue_state.retry_limit is not None:
-            return queue_state.retry_limit >= task_state.retry_count
+            return queue_state.retry_limit > task_state.retry_count
 
         elif queue_state.age_limit is not None:
             return queue_state.age_limit >= task_state.age
