@@ -4,6 +4,7 @@ import os
 from google.appengine.ext import db
 from google.appengine.api import taskqueue, queueinfo
 
+
 def nested_getattr(obj, key, *args):
     path_keys = key.split(".")
     for key in path_keys:
@@ -16,8 +17,23 @@ def nested_getattr(obj, key, *args):
                 raise
     return obj
 
-with open('queue.yaml', 'r') as fh:
-    all_queue_info = queueinfo.LoadSingleQueue(fh)
+
+def get_queue_info():
+    """
+        Walk up the tree until queue.yaml is found
+    """
+    directory = os.path.abspath(".")
+    while directory:
+        file_path = os.path.join(directory, 'queue.yaml')
+        if os.path.isfile(file_path):
+            with open(os.path.join(directory, 'queue.yaml'), 'r') as fh:
+                return queueinfo.LoadSingleQueue(fh)
+        else:
+            directory = os.path.dirname(directory)
+            if os.path.realpath(directory) == directory:
+                break
+
+all_queue_info = get_queue_info()
 
 
 class TaskState(db.Model):
