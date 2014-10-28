@@ -14,28 +14,28 @@ gae_defer_manager is a wrapper for the deferred library in the Google App Engine
 
 ## Setup
 
-Include the gae_defer_manager folder in your project.
+Include the deferred_manager folder in your project.
 
 Add the following handlers to your app.yaml file (and any other module config files as required):
 
 ```yaml
 handlers:
   - url: /_ah/queue/deferred
-    script: gae_defer_manager.handler.application
+    script: deferred_manager.handler.application
     login: admin
     secure: always
 
   - url: /_ah/deferredconsole/static/
-    static_dir: gae_defer_manager/static
+    static_dir: deferred_manager/static
     expiration: 1d
 
   - url: /_ah/deferredconsole.*
-    script: gae_defer_manager.application
+    script: deferred_manager.application
     login: admin
     secure: always
 ```
 
-Change any calls to `google.appengine.ext.deferred.defer` to `gae_defer_manager.defer`
+Change any calls to `google.appengine.ext.deferred.defer` to `deferred_manager.defer`
 
 ## Usage
 
