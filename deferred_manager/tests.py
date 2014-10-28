@@ -13,11 +13,9 @@ from . import models
 from .handler import application
 from .wrapper import defer
 
-TESTCONFIG_DIR = os.path.join(os.path.dirname(os.path.realpath(__file__)), "testconfig")
+TESTCONFIG_DIR = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "testconfig")
 
-with open(os.path.join(TESTCONFIG_DIR, 'queue.yaml'), 'r') as fh:
-    # patch queue.yaml
-    models.all_queue_info = queueinfo.LoadSingleQueue(fh)
 
 def noop(*args, **kwargs):
     pass
@@ -73,11 +71,11 @@ class DeferTaskTests(BaseTest):
 
     def test_class_method_repr(self):
         task_state = defer(Foo().bar)
-        self.assertEqual(task_state.deferred_function, u"<class 'gae_defer_manager.tests.Foo'>.bar")
+        self.assertEqual(task_state.deferred_function, u"<class 'deferred_manager.tests.Foo'>.bar")
 
     def test_module_func_repr(self):
         task_state = defer(noop)
-        self.assertEqual(task_state.deferred_function, u"gae_defer_manager.tests.noop")
+        self.assertEqual(task_state.deferred_function, u"deferred_manager.tests.noop")
 
     def test_builtin_func_repr(self):
         task_state = defer(map)
@@ -85,7 +83,7 @@ class DeferTaskTests(BaseTest):
 
     def test_callable_obj_func_repr(self):
         task_state = defer(Foo)
-        self.assertEqual(task_state.deferred_function, u"gae_defer_manager.tests.Foo")
+        self.assertEqual(task_state.deferred_function, u"deferred_manager.tests.Foo")
 
     def test_builtin_method_repr(self):
         task_state = defer(datetime.datetime.utcnow)
