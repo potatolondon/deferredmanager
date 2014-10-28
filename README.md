@@ -1,7 +1,7 @@
 GAE Defer Manager (ALPHA)
 ========================
 
-[![Build Status](https://travis-ci.org/nealedj/gae-defer-manager.svg?branch=master)](https://travis-ci.org/nealedj/gae-defer-manager)
+[![Build Status](https://travis-ci.org/nealedj/gae_defer_manager.svg?branch=master)](https://travis-ci.org/nealedj/gae_defer_manager)
 
 ## A library to wrap deferring tasks on the Google App Engine Taskqueue API
 
