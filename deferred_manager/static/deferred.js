@@ -130,7 +130,7 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 			.then(function() {
 				$scope.queue.loading = false;
 				if ($scope.autorefresh && $scope.refreshInterval) {
-					$scope.queue.timeoutID = setTimeout(getTasks, $scope.refreshInterval*1000, queueName);
+					$scope.queue.timeoutID = setTimeout(getTasks, $scope.refreshInterval*1000);
 				}
 			})
 	}
