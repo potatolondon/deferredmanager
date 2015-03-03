@@ -8,6 +8,8 @@ var LOG_LEVELS = {
 	4: 'critical'
 };
 
+var maxFetch = 10;
+
 deferredApp.constant('appSettings', {
 	apiRootUrl: getRoot()
 });
@@ -49,6 +51,7 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 	var etaDeltaIntervalID;
 	$scope.queue = {};
 	$scope.getTasks = getTasks;
+	$scope.loadMoreTasks = loadMoreTasks;
 
 	getTasks($scope.queue);
 
@@ -75,7 +78,7 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 		if (!task.is_complete && !task.is_permanently_failed) {
 			if (task.retry_count) {
 				return 'pending - failed ' + (task.retry_count + 1) + ' times';
-			} 
+			}
 			else if (task.first_run) {
 				return 'pending - failed once';
 			}
@@ -117,13 +120,16 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 	function getTasks() {
 		clearTimeout($scope.queue.timeoutID);
 		$scope.queue.loading = true;
-		$http.get(appSettings.apiRootUrl + $scope.queueName)
+		var numberToLoad = $scope.queue.tasks ? $scope.queue.tasks.length : maxFetch;
+		$http.get(appSettings.apiRootUrl + $scope.queueName + "?limit=" + numberToLoad)
 			.success(function(data) {
 				$scope.queue = data;
 				if ($scope.queue.stats.oldest_eta) {
 					$scope.queue.stats.oldest_eta = new Date($scope.queue.stats.oldest_eta)
 				}
 				$scope.queue.tasks.forEach(processTaskModel);
+
+				$scope.loadMore = data.tasks.length == maxFetch;
 
 				setOldestEtaDelta();
 			})
@@ -132,6 +138,27 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 				if ($scope.autorefresh && $scope.refreshInterval) {
 					$scope.queue.timeoutID = setTimeout(getTasks, $scope.refreshInterval*1000);
 				}
+			})
+	}
+
+	function loadMoreTasks() {
+		$scope.queue.loading = true;
+		$http.get(appSettings.apiRootUrl + $scope.queueName + "?limit=" + maxFetch + "&cursor=" + $scope.queue.cursor)
+			.success(function(data) {
+				if (data.tasks.length) {
+					$scope.queue.cursor = data.cursor;
+
+					data.tasks.forEach(function (task) {
+						processTaskModel(task);
+						$scope.queue.tasks.push(task);
+					});
+				}
+				else {
+					$scope.loadMoreTasks = false;
+				}
+			})
+			.then(function() {
+				$scope.queue.loading = false;
 			})
 	}
 
@@ -204,8 +231,8 @@ function extend(dst) {
 					extend(dst[key], value);
 				} else {
 					dst[key] = value;
-				}     
-			});   
+				}
+			});
 		}
 	});
 	return dst;

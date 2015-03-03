@@ -14,7 +14,7 @@
 			<accordion-group>
 				<accordion-heading>
 					<div class="loading pull-right" ng-show="queue.loading"></div>
-					<span class="refresh pull-right" href="#" ng-hide="queue.loading" ng-click="getTasks(queueName);$event.stopPropagation()">refresh</span>
+					<span class="refresh pull-right" ng-hide="queue.loading" ng-click="getTasks(queueName);$event.stopPropagation()">refresh</span>
 					<div class="queue_heading">{{ queueName }}</div>
 				</accordion-heading>
 				<table class="table">
@@ -29,7 +29,7 @@
 				<button class="btn btn-danger pull-right" ng-click="purgeQueue()">Purge Queue</button>
 			</accordion-group>
 
-			<accordion-group ng-repeat="task in queue.tasks" class="task__panel" is-open="$first">			
+			<accordion-group ng-repeat="task in queue.tasks" class="task__panel" is-open="$first">
 				<accordion-heading>
 					<div ng-class="{'list-group-item': 1, 'list-group-item-danger': task.is_permanently_failed, 'list-group-item-success': task.is_complete && !task.is_permanently_failed, 'list-group-item-warning': !task.is_complete && !task.is_permanently_failed && (task.retry_count || task.first_run)}" popover="{{ task.displayText }}" popover-popup-delay="500" popover-trigger="mouseenter">
 						<span class="badge" ng-hide="task.is_complete && !task.is_permanently_failed">{{ getTaskStatusMsg(task) }}</span>
@@ -62,5 +62,7 @@
 				</div>
 			</accordion-group>
 		</accordion>
+
+		<div class="load-more" ng-click="loadMoreTasks();$event.stopPropagation()" ng-show="loadMoreTasks">Load more</span>
 	</div>
 </div>
