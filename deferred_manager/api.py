@@ -24,6 +24,7 @@ def serialize_model(obj):
 def dump(obj):
     return json.dumps(obj, default=_serializer)
 
+
 class QueueListHandler(webapp2.RequestHandler):
     def get(self):
         ctx = {
@@ -33,6 +34,7 @@ class QueueListHandler(webapp2.RequestHandler):
         self.response.content_type = "application/json"
         self.response.write(dump(ctx))
 
+
 class QueueHandler(webapp2.RequestHandler):
     def get(self, queue_name):
         queue_state = QueueState.get_by_key_name(queue_name)
@@ -41,7 +43,12 @@ class QueueHandler(webapp2.RequestHandler):
             self.response.set_status(404)
             return
 
-        tasks = TaskState.all().ancestor(queue_state).order("-deferred_at").fetch(limit=int(self.request.GET.get('limit', 1000)))
+        tasks = (
+            TaskState.all()
+            .ancestor(queue_state)
+            .order("-deferred_at")
+            .with_cursor(start_cursor=self.request.GET.get('cursor'))
+        )
 
         ctx = db.to_dict(queue_state)
 
@@ -50,7 +57,8 @@ class QueueHandler(webapp2.RequestHandler):
         if stats.oldest_eta_usec:
             ctx['stats']['oldest_eta'] = datetime.datetime.utcfromtimestamp(stats.oldest_eta_usec / 1e6)
 
-        ctx['tasks'] = map(db.to_dict, tasks)
+        ctx['tasks'] = map(db.to_dict, tasks[:int(self.request.GET.get('limit', 1000))])
+        ctx['cursor'] = tasks.cursor()
 
         self.response.content_type = "application/json"
         self.response.write(dump(ctx))
