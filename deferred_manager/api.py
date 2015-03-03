@@ -41,7 +41,7 @@ class QueueHandler(webapp2.RequestHandler):
             self.response.set_status(404)
             return
 
-        tasks = TaskState.all().ancestor(queue_state).order("-deferred_at").fetch(limit=1000)
+        tasks = TaskState.all().ancestor(queue_state).order("-deferred_at").fetch(limit=int(self.request.GET.get('limit', 1000)))
 
         ctx = db.to_dict(queue_state)
 
@@ -77,7 +77,7 @@ class QueueHandler(webapp2.RequestHandler):
 
         self.response.content_type = "application/json"
         self.response.write(dump({
-            "message": "Purging " + queue_name    
+            "message": "Purging " + queue_name
         }))
 
 class TaskInfoHandler(webapp2.RequestHandler):
