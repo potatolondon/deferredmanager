@@ -68,7 +68,7 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
         # TODO: handle default retry params and task-specific retry params
         if queue_state.retry_limit is not None and queue_state.age_limit is not None:
             return (
-                queue_state.retry_limit > task_state.retry_count or 
+                queue_state.retry_limit > task_state.retry_count or
                 queue_state.age_limit >= task_state.age
             )
 
