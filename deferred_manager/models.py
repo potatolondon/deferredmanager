@@ -74,14 +74,16 @@ class QueueState(db.Model):
         super(QueueState, self).__init__(*args, **kwargs)
 
     def _get_queueinfo_key(self, key, default=None):
-        queue_info_obj = getattr(self, "_queue_info_obj", None)
+        queue_info_obj = getattr(self, "_queue_info_obj", default)
         if not queue_info_obj:
-            self._queue_info_obj = queue_info_obj = next(qi for qi in all_queue_info.queue if qi.name == self.name)
-        return nested_getattr(queue_info_obj, key, None)
+            self._queue_info_obj = queue_info_obj = next(
+                qi for qi in all_queue_info.queue if qi.name == self.name)
+        return nested_getattr(queue_info_obj, key, default)
 
     @property
     def retry_limit(self):
-        limit = self._get_queueinfo_key("retry_parameters.task_retry_limit", None)
+        limit = self._get_queueinfo_key(
+            "retry_parameters.task_retry_limit", None)
 
         if limit is not None:
             return int(limit)

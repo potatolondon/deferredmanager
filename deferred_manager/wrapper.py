@@ -10,7 +10,8 @@ from .models import TaskState, QueueState
 def defer(obj, *args, **kwargs):
     task_reference = kwargs.pop('task_reference', None)
     unique_until = kwargs.pop('unique_until', False)
-    queue_name = kwargs.get("_queue", deferred.deferred._DEFAULT_QUEUE)
+    queue_name = kwargs.get(
+        "_queue", deferred.deferred._DEFAULT_QUEUE)
 
     if unique_until:
         assert task_reference, "task_reference must be passed if unique"
@@ -25,7 +26,8 @@ def defer(obj, *args, **kwargs):
             .ancestor(queuestate)
         )
         if existing_tasks.count(limit=1):
-            logging.warning("Did not defer task with reference {0} - task already present".format(task_reference))
+            logging.warning(
+                "Did not defer task with reference {0} - task already present".format(task_reference))
             return
 
     task = deferred.defer(obj, *args, **kwargs)
@@ -56,7 +58,7 @@ def _get_or_create_queuestate(queue_name):
     return queuestate
 
 def _strip_defer_kwargs(kwargs):
-    return {k:v for k,v in kwargs.items() if not k.startswith('_')}
+    return {k:v for k, v in kwargs.items() if not k.startswith('_')}
 
 def _get_func_repr(func):
     if isinstance(func, types.MethodType):

@@ -26,7 +26,8 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
             return super(GAEDeferAdminTaskHandler, self).post()
 
         task_state.is_running = True
-        task_state.retry_count = int(self.request.headers['X-AppEngine-TaskExecutionCount'])
+        task_state.retry_count = int(
+            self.request.headers['X-AppEngine-TaskExecutionCount'])
         task_state.request_log_ids.append(os.environ['REQUEST_LOG_ID'])
 
         if task_state.first_run is None:
@@ -54,7 +55,10 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
             self.response.set_status(500)
             if not self.should_retry(queue_state, task_state):
                 task_state.is_complete = task_state.is_permanently_failed = True
-                logging.warning("Task has failed {0} times and is {1}s old. It will not be retried.".format(task_state.retry_count, task_state.age))
+                logging.warning(
+                    "Task has failed {0} times and is {1}s old. "
+                    "It will not be retried."
+                    .format(task_state.retry_count, task_state.age))
 
         else:
             task_state.is_complete = True
@@ -88,8 +92,9 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
 
         in_prod = (not os.environ.get("SERVER_SOFTWARE").startswith("Devel"))
         if in_prod and os.environ.get("REMOTE_ADDR") != "0.1.0.2":
-            logging.critical('Detected an attempted XSRF attack. This request did '
-                           'not originate from Task Queue.')
+            logging.critical(
+                'Detected an attempted XSRF attack. This request did '
+                 'not originate from Task Queue.')
             return True
 
 

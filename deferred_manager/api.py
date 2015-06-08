@@ -53,11 +53,16 @@ class QueueHandler(webapp2.RequestHandler):
         ctx = db.to_dict(queue_state)
 
         stats = queue_state.get_queue_statistics()
-        ctx['stats'] = {k: getattr(stats, k) for k in ("tasks", "executed_last_minute", "in_flight", "enforced_rate",)}
+        ctx['stats'] = {
+            k: getattr(stats, k)
+            for k in ("tasks", "executed_last_minute", "in_flight", "enforced_rate",)
+        }
         if stats.oldest_eta_usec:
-            ctx['stats']['oldest_eta'] = datetime.datetime.utcfromtimestamp(stats.oldest_eta_usec / 1e6)
+            ctx['stats']['oldest_eta'] = datetime.datetime.utcfromtimestamp(
+                stats.oldest_eta_usec / 1e6)
 
-        ctx['tasks'] = map(db.to_dict, tasks[:int(self.request.GET.get('limit', 1000))])
+        ctx['tasks'] = map(
+            db.to_dict, tasks[:int(self.request.GET.get('limit', 1000))])
         ctx['cursor'] = tasks.cursor()
 
         self.response.content_type = "application/json"
@@ -75,7 +80,13 @@ class QueueHandler(webapp2.RequestHandler):
 
         rpcs = []
 
-        for task in TaskState.all().ancestor(queue_state).filter('is_complete', False).filter('is_running', False).run():
+        for task in (
+                TaskState.all()
+                .ancestor(queue_state)
+                .filter('is_complete', False)
+                .filter('is_running', False)
+                .run()
+                ):
             task.is_complete = task.is_permanently_failed = True
             task.was_purged = True
             rpcs.append(db.put_async(task))
@@ -101,7 +112,10 @@ class TaskInfoHandler(webapp2.RequestHandler):
             'task': db.to_dict(task_state),
         }
         if task_state.request_log_ids:
-            ctx['logs'] = sorted(get_logs(task_state.request_log_ids, logservice.LOG_LEVEL_INFO), key=itemgetter('start_time'), reverse=True)
+            ctx['logs'] = sorted(
+                get_logs(task_state.request_log_ids, logservice.LOG_LEVEL_INFO),
+                key=itemgetter('start_time'),
+                reverse=True)
 
         self.response.content_type = "application/json"
         self.response.write(dump(ctx))
@@ -109,7 +123,8 @@ class TaskInfoHandler(webapp2.RequestHandler):
 
 class LogHandler(webapp2.RequestHandler):
     def get(self, log_id):
-        log_level = int(self.request.GET.get('level', logservice.LOG_LEVEL_INFO))
+        log_level = int(
+            self.request.GET.get('level', logservice.LOG_LEVEL_INFO))
         ctx = {
             'log': next(get_logs([log_id], log_level), None)
         }
@@ -128,9 +143,11 @@ def get_logs(log_ids, log_level):
             for name, val in request_log.__class__.__dict__.iteritems()
             if isinstance(val, property) and not name.startswith('_')
         }
-        d['start_time'] = datetime.datetime.fromtimestamp(request_log.start_time)
+        d['start_time'] = datetime.datetime.fromtimestamp(
+            request_log.start_time)
         if request_log.end_time:
-            d['end_time'] = datetime.datetime.fromtimestamp(request_log.end_time)
+            d['end_time'] = datetime.datetime.fromtimestamp(
+                request_log.end_time)
             d['duration'] = (d['end_time'] - d['start_time']).total_seconds()
 
         d['app_logs'] = [{

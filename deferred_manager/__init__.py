@@ -4,6 +4,7 @@ from . import api
 
 from .wrapper import defer
 
+
 class HomeHandler(webapp2.RequestHandler):
     def get(self):
         url = self.request.url
@@ -11,10 +12,11 @@ class HomeHandler(webapp2.RequestHandler):
             url += "/"
         self.redirect(url + 'static/index.html')
 
+
 application = webapp2.WSGIApplication([
-    ('.+/api/logs/([\w\d-]+)', api.LogHandler),
-    ('.+/api/([\w\d-]+)/([\w\d-]+)', api.TaskInfoHandler),
-    ('.+/api/([\w\d-]+)', api.QueueHandler),
-    ('.+/api.*', api.QueueListHandler),
-    ('.*', HomeHandler),
+    (r'.+/api/logs/([\w\d-]+)', api.LogHandler),
+    (r'.+/api/([\w\d-]+)/([\w\d-]+)', api.TaskInfoHandler),
+    (r'.+/api/([\w\d-]+)', api.QueueHandler),
+    (r'.+/api.*', api.QueueListHandler),
+    (r'.*', HomeHandler),
 ])
