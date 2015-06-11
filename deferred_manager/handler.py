@@ -1,33 +1,77 @@
 import datetime
 import logging
 import os
-import webapp2
+import pickle
 
-from google.appengine.ext import deferred
+from google.appengine.ext import ndb, deferred
+from google.appengine.api import queueinfo
 
-from .models import TaskState, QueueState
+from .models import TaskState, UniqueTaskMarker
+
+from .utils import attrgetter, get_func_repr, get_queue_info
 
 
-class GAEDeferAdminTaskHandler(deferred.TaskHandler):
-    """A webapp handler class that processes deferred invocations."""
+class TaskWrapper(object):
+    def __init__(self):
+        self.all_queue_info = get_queue_info().queue
 
-    def post(self):
-        if self.request_forbidden():
-            self.response.set_status(403)
-            return
+    def __call__(self, obj, task_reference):
+        fn, fn_args, fn_kwargs = pickle.loads(obj)
 
-        queue_name = self.request.headers['X-AppEngine-QueueName']
-        task_name = self.request.headers['X-AppEngine-TaskName']
+        task_state = self.get_task_state()
+        if not task_state:
+            logging.warning(
+                "No task state present for task {0}"
+                .format(get_func_repr(fn)))
 
-        queue_state = QueueState.get_by_key_name(queue_name)
-        task_state = TaskState.get_by_key_name(task_name, parent=queue_state)
+        try:
+            fn(*fn_args, **fn_kwargs)
+
+        except deferred.SingularTaskFailure as e:
+            if task_state and not self.should_retry(task_state):
+                self.complete_task(task_state, permanently_failed=True)
+            else:
+                logging.debug("Failure executing task, task retry forced")
+                raise
+
+        except deferred.PermanentTaskFailure as e:
+            logging.exception("Permanent failure attempting to execute task")
+            if task_state:
+                self.complete_task(task_state, permanently_failed=True)
+            raise
+
+        except Exception as e:
+            logging.exception(e)
+
+            if task_state and not self.should_retry(task_state):
+                self.complete_task(task_state, permanently_failed=True)
+                logging.warning(
+                    "Task has failed {0} times and is {1}s old. "
+                    "It will not be retried."
+                    .format(task_state.retry_count, task_state.age))
+
+            raise
+
+        else:
+            if task_state:
+                self.complete_task(task_state)
+
+        finally:
+            if task_state:
+                task_state.is_running = False
+                task_state.put()
+
+    @staticmethod
+    @ndb.transactional
+    def get_task_state():
+        task_name = os.environ['HTTP_X_APPENGINE_TASKNAME']
+        task_state = TaskState.get_by_id(task_name)
 
         if not task_state:
-            return super(GAEDeferAdminTaskHandler, self).post()
+            return
 
         task_state.is_running = True
-        task_state.retry_count = int(
-            self.request.headers['X-AppEngine-TaskExecutionCount'])
+        task_state.retry_count = int(os.environ['HTTP_X_APPENGINE_TASKEXECUTIONCOUNT'])
         task_state.request_log_ids.append(os.environ['REQUEST_LOG_ID'])
 
         if task_state.first_run is None:
@@ -35,67 +79,54 @@ class GAEDeferAdminTaskHandler(deferred.TaskHandler):
 
         task_state.put()
 
-        try:
-            self.run_from_request()
+        return task_state
 
-        except deferred.SingularTaskFailure as e:
-            if not self.should_retry(queue_state, task_state):
-                task_state.is_complete = task_state.is_permanently_failed = True
-            else:
-                logging.debug("Failure executing task, task retry forced")
-                self.response.set_status(408)
+    @staticmethod
+    @ndb.transactional(xg=True)
+    def complete_task(task_state, permanently_failed=False):
+        task_state.is_complete = True
+        task_state.is_permanently_failed = permanently_failed
 
-        except deferred.PermanentTaskFailure as e:
-            logging.exception("Permanent failure attempting to execute task")
-            task_state.is_complete = task_state.is_permanently_failed = True
+        if task_state.unique:
+            ndb.Key(UniqueTaskMarker, task_state.task_reference).delete()
 
-        except Exception as e:
-            logging.exception(e)
-
-            self.response.set_status(500)
-            if not self.should_retry(queue_state, task_state):
-                task_state.is_complete = task_state.is_permanently_failed = True
-                logging.warning(
-                    "Task has failed {0} times and is {1}s old. "
-                    "It will not be retried."
-                    .format(task_state.retry_count, task_state.age))
-
-        else:
-            task_state.is_complete = True
-
-        finally:
-            task_state.is_running = False
-
-        task_state.put()
-
-    def should_retry(self, queue_state, task_state):
+    def should_retry(self, task_state):
+        retry_limit = self.get_retry_limit()
+        age_limit = self.get_age_limit()
         # TODO: handle default retry params and task-specific retry params
-        if queue_state.retry_limit is not None and queue_state.age_limit is not None:
+        if retry_limit is not None and age_limit is not None:
             return (
-                queue_state.retry_limit > task_state.retry_count or
-                queue_state.age_limit >= task_state.age
+                retry_limit > task_state.retry_count or
+                age_limit >= task_state.age
             )
 
-        elif queue_state.retry_limit is not None:
-            return queue_state.retry_limit > task_state.retry_count
+        elif retry_limit is not None:
+            return retry_limit > task_state.retry_count
 
-        elif queue_state.age_limit is not None:
-            return queue_state.age_limit >= task_state.age
+        elif age_limit is not None:
+            return age_limit >= task_state.age
 
         return True
 
-    def request_forbidden(self):
-        if 'X-AppEngine-TaskName' not in self.request.headers:
-            logging.critical('Detected an attempted XSRF attack. The header '
-                           '"X-AppEngine-Taskname" was not set.')
-            return True
+    def get_queue_info(self):
+        queue_name = os.environ['HTTP_X_APPENGINE_QUEUENAME']
+        return next(
+            qi for qi in self.all_queue_info if qi.name == queue_name)
 
-        in_prod = (not os.environ.get("SERVER_SOFTWARE").startswith("Devel"))
-        if in_prod and os.environ.get("REMOTE_ADDR") != "0.1.0.2":
-            logging.critical(
-                'Detected an attempted XSRF attack. This request did '
-                 'not originate from Task Queue.')
-            return True
+    def get_retry_limit(self):
+        try:
+            limit = attrgetter("retry_parameters.task_retry_limit")(self.get_queue_info())
+        except AttributeError:
+            limit = None
+
+        if limit is not None:
+            return int(limit)
+
+    def get_age_limit(self):
+        limit = attrgetter("retry_parameters.task_age_limit")(self.get_queue_info())
+
+        if limit is not None:
+            queueinfo.ParseTaskAgeLimit(limit)
 
 
-application = webapp2.WSGIApplication([(".*", GAEDeferAdminTaskHandler)])
+task_wrapper = TaskWrapper()

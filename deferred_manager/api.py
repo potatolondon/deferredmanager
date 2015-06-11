@@ -4,10 +4,14 @@ import webapp2
 
 from operator import itemgetter
 
-from google.appengine.ext import db
 from google.appengine.api.logservice import logservice
+from google.appengine.api import taskqueue
+from google.appengine.datastore.datastore_query import Cursor
+from google.appengine.ext import ndb
 
-from .models import TaskState, QueueState
+from .models import TaskState, UniqueTaskMarker
+from .utils import get_queue_info
+
 
 def _serializer(obj):
     if isinstance(obj, datetime.datetime):
@@ -18,17 +22,18 @@ def _serializer(obj):
 
     raise ValueError(obj)
 
-def serialize_model(obj):
-    return json.dumps(db.to_dict(obj), default=_serializer)
 
 def dump(obj):
     return json.dumps(obj, default=_serializer)
 
 
+all_queue_info = get_queue_info()
+
+
 class QueueListHandler(webapp2.RequestHandler):
     def get(self):
         ctx = {
-            "queues": map(db.to_dict, QueueState.all())
+            "queues": [q for q in all_queue_info.queue]
         }
 
         self.response.content_type = "application/json"
@@ -37,79 +42,94 @@ class QueueListHandler(webapp2.RequestHandler):
 
 class QueueHandler(webapp2.RequestHandler):
     def get(self, queue_name):
-        queue_state = QueueState.get_by_key_name(queue_name)
+        cursor = self.request.GET.get('cursor')
 
-        if not queue_state:
-            self.response.set_status(404)
-            return
+        if cursor:
+            cursor = Cursor(urlsafe=cursor)
 
-        tasks = (
-            TaskState.all()
-            .ancestor(queue_state)
-            .order("-deferred_at")
-            .with_cursor(start_cursor=self.request.GET.get('cursor'))
-        )
+        limit = int(self.request.GET.get('limit', 1000))
 
-        ctx = db.to_dict(queue_state)
+        if not limit:
+            tasks = []
+            new_cursor = more = None
+        else:
+            tasks, new_cursor, more = (
+                TaskState
+                .query(TaskState.queue_name == queue_name)
+                .order(-TaskState.deferred_at)
+                .fetch_page(
+                    limit,
+                    start_cursor=cursor)
+            )
 
-        stats = queue_state.get_queue_statistics()
+        stats = self.get_queue_stats(queue_name)
+        ctx = {}
         ctx['stats'] = {
             k: getattr(stats, k)
-            for k in ("tasks", "executed_last_minute", "in_flight", "enforced_rate",)
+            for k in (
+                "tasks", "executed_last_minute", "in_flight", "enforced_rate",)
         }
         if stats.oldest_eta_usec:
             ctx['stats']['oldest_eta'] = datetime.datetime.utcfromtimestamp(
                 stats.oldest_eta_usec / 1e6)
-
-        ctx['tasks'] = map(
-            db.to_dict, tasks[:int(self.request.GET.get('limit', 1000))])
-        ctx['cursor'] = tasks.cursor()
+        ctx['tasks'] = [t.to_dict() for t in tasks]
+        if new_cursor:
+            ctx['cursor'] = new_cursor.urlsafe()
 
         self.response.content_type = "application/json"
         self.response.write(dump(ctx))
 
     def delete(self, queue_name):
-        # DELETE == purge in this case
-        queue_state = QueueState.get_by_key_name(queue_name)
+        self.get_queue_stats(queue_name).queue.purge()
 
-        if not queue_state:
-            self.response.set_status(404)
-            return
+        @ndb.transactional_tasklet(xg=True)
+        def purge_task_states(task_state):
+            task_state.is_complete = task_state.is_permanently_failed = True
+            task_state.was_purged = True
 
-        queue_state.get_queue_statistics().queue.purge()
+            task_state_fut = task_state.put_async()
 
-        rpcs = []
+            delete_fut = (
+                ndb.Key(UniqueTaskMarker, task_state.task_reference)
+                .delete_async()
+            )
 
-        for task in (
-                TaskState.all()
-                .ancestor(queue_state)
-                .filter('is_complete', False)
-                .filter('is_running', False)
-                .run()
-                ):
-            task.is_complete = task.is_permanently_failed = True
-            task.was_purged = True
-            rpcs.append(db.put_async(task))
+            yield task_state_fut, delete_fut
+            raise ndb.Return(task_state_fut)
 
-        for rpc in rpcs:
-            rpc.get_result()
+        futures = []
+        for task_state in (
+                TaskState
+                .query(
+                    TaskState.queue_name == queue_name,
+                    TaskState.is_complete == False,
+                    TaskState.is_running == False
+                )):
+            futures.append(purge_task_states(task_state))
+
+        for fut in futures:
+            fut.get_result()
 
         self.response.content_type = "application/json"
         self.response.write(dump({
             "message": "Purging " + queue_name
         }))
 
+    @classmethod
+    def get_queue_stats(cls, queue_name):
+        return taskqueue.QueueStatistics.fetch(queue_name)
+
+
 class TaskInfoHandler(webapp2.RequestHandler):
     def get(self, queue_name, task_name):
-        queue_state = QueueState.get_by_key_name(queue_name)
-        task_state = TaskState.get_by_key_name(task_name, parent=queue_state)
+        task_state = TaskState.get_by_id(task_name)
 
-        if not (queue_state and task_state):
+        if not task_state:
             self.response.set_status(404)
             return
 
         ctx = {
-            'task': db.to_dict(task_state),
+            'task': task_state.to_dict(),
         }
         if task_state.request_log_ids:
             ctx['logs'] = sorted(

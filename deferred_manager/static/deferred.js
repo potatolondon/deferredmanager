@@ -47,7 +47,7 @@ deferredApp.controller('HomeCtrl', function($scope, $http, $q, appSettings) {
 		});
 });
 
-deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
+deferredApp.controller('QueueCtrl', function($scope, $http, $timeout, appSettings) {
 	var etaDeltaIntervalID;
 	$scope.queue = {};
 	$scope.getTasks = getTasks;
@@ -87,7 +87,11 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 	};
 
 	$scope.purgeQueue = function() {
-		$http.delete(appSettings.apiRootUrl + $scope.queueName).then(getTasks);
+		$http
+			.delete(appSettings.apiRootUrl + $scope.queueName)
+			.then(function () {
+				$timeout(getTasks, 800);
+			});
 	};
 
 	$scope.$watchCollection('[autorefresh, refreshInterval]', function(val) {
@@ -120,8 +124,7 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 	function getTasks() {
 		clearTimeout($scope.queue.timeoutID);
 		$scope.queue.loading = true;
-		var numberToLoad = $scope.queue.tasks ? $scope.queue.tasks.length : maxFetch;
-		$http.get(appSettings.apiRootUrl + $scope.queueName + "?limit=" + numberToLoad)
+		$http.get(appSettings.apiRootUrl + $scope.queueName + "?limit=" + maxFetch)
 			.success(function(data) {
 				$scope.queue = data;
 				if ($scope.queue.stats.oldest_eta) {
@@ -154,7 +157,7 @@ deferredApp.controller('QueueCtrl', function($scope, $http, appSettings) {
 					});
 				}
 				else {
-					$scope.loadMoreTasks = false;
+					$scope.loadMore = false;
 				}
 			})
 			.then(function() {
