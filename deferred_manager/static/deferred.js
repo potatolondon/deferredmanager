@@ -208,7 +208,7 @@ deferredApp.controller('TaskCtrl', function($scope, $timeout, $location, $routeP
 				$location.path("/" + task.queue_name + "/" + resp.data.task_id);
 			}
 			else {
-				console.error('Could not re-run task. A task with the same reference is already running and the task has been marked as unique.');
+				console.error(resp.data.message);
 			}
 		});
 	}

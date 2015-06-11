@@ -146,13 +146,17 @@ class ReRunTaskHandler(webapp2.RequestHandler):
     def post(self, queue_name, task_name):
         task_state = TaskState.get_by_id(task_name)
 
+        self.response.content_type = "application/json"
         if not task_state:
             self.response.set_status(404)
             return
 
         if not task_state.is_complete:
             self.response.set_status(400)
-            self.response.write("Task has not yet finished running")
+            self.response.write(dump({
+                "message": "Could not re-run task. Task has not yet finished running"
+            }))
+            return
 
         fn, args, kwargs = pickle.loads(task_state.pickle)
 
@@ -164,11 +168,17 @@ class ReRunTaskHandler(webapp2.RequestHandler):
             **kwargs
         )
 
-        self.response.content_type = "application/json"
-        self.response.write(dump({
-            "task_id": new_task.task_name if new_task else None,
-            "message": "Re-running task"
-        }))
+
+        if new_task:
+            self.response.write(dump({
+                "task_id": new_task.task_name,
+                "message": "Re-running task"
+            }))
+        else:
+            self.response.write(dump({
+                "message": "Could not re-run task. "
+                    "A task with the same reference is already running and the task has been marked as unique."
+            }))
 
 
 class LogHandler(webapp2.RequestHandler):
