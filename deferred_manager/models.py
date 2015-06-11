@@ -21,7 +21,7 @@ class TaskState(ndb.Model):
     deferred_at = ndb.DateTimeProperty(auto_now_add=True)
     pickle = ndb.BlobProperty()
 
-    request_log_ids = ndb.StringProperty(repeated=True)
+    request_log_ids = ndb.TextProperty()
 
     @property
     def age(self):

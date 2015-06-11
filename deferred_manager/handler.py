@@ -72,7 +72,11 @@ class TaskWrapper(object):
 
         task_state.is_running = True
         task_state.retry_count = int(os.environ['HTTP_X_APPENGINE_TASKEXECUTIONCOUNT'])
-        task_state.request_log_ids.append(os.environ['REQUEST_LOG_ID'])
+
+        if task_state.request_log_ids is None:
+            task_state.request_log_ids = os.environ['REQUEST_LOG_ID']
+        else:
+            task_state.request_log_ids += "," + os.environ['REQUEST_LOG_ID']
 
         if task_state.first_run is None:
             task_state.first_run = datetime.datetime.utcnow()

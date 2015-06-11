@@ -135,7 +135,7 @@ class TaskInfoHandler(webapp2.RequestHandler):
         }
         if task_state.request_log_ids:
             ctx['logs'] = sorted(
-                get_logs(task_state.request_log_ids, logservice.LOG_LEVEL_INFO),
+                get_logs(task_state.request_log_ids.split(','), logservice.LOG_LEVEL_INFO),
                 key=itemgetter('start_time'),
                 reverse=True)
 
