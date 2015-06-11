@@ -164,6 +164,7 @@ class ReRunTaskHandler(webapp2.RequestHandler):
             fn,
             unique=task_state.unique,
             task_reference=task_state.task_reference,
+            _queue=task_state.queue_name,
             *args,
             **kwargs
         )
