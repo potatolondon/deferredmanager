@@ -1,5 +1,6 @@
 import datetime
 import json
+import pickle
 import webapp2
 
 from operator import itemgetter
@@ -11,6 +12,7 @@ from google.appengine.ext import ndb
 
 from .models import TaskState, UniqueTaskMarker
 from .utils import get_queue_info
+from .wrapper import defer
 
 
 def _serializer(obj):
@@ -139,6 +141,33 @@ class TaskInfoHandler(webapp2.RequestHandler):
 
         self.response.content_type = "application/json"
         self.response.write(dump(ctx))
+
+class ReRunTaskHandler(webapp2.RequestHandler):
+    def post(self, queue_name, task_name):
+        task_state = TaskState.get_by_id(task_name)
+
+        if not task_state:
+            self.response.set_status(404)
+            return
+
+        if not task_state.is_complete:
+            self.response.set_status(400)
+            self.response.write("Task has not yet finished running")
+
+        fn, args, kwargs = pickle.loads(task_state.pickle)
+
+        defer(
+            fn,
+            unique=task_state.unique,
+            task_reference=task_state.task_reference,
+            *args,
+            **kwargs
+        )
+
+        self.response.content_type = "application/json"
+        self.response.write(dump({
+            "message": "Re-running task"
+        }))
 
 
 class LogHandler(webapp2.RequestHandler):

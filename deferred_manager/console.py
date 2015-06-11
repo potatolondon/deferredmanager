@@ -12,6 +12,7 @@ class HomeHandler(webapp2.RequestHandler):
 
 application = webapp2.WSGIApplication([
     (r'.+/api/logs/([\w\d-]+)', api.LogHandler),
+    (r'.+/api/([\w\d-]+)/([\w\d-]+)/rerun', api.ReRunTaskHandler),
     (r'.+/api/([\w\d-]+)/([\w\d-]+)', api.TaskInfoHandler),
     (r'.+/api/([\w\d-]+)', api.QueueHandler),
     (r'.+/api.*', api.QueueListHandler),

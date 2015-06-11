@@ -57,7 +57,10 @@
 						Retry count: {{task.retry_count + 1}}
 					</p>
 					<p>
-						<a ng-href="#/{{ queueName }}/{{ task.task_name }}">View logs</a>
+						<div class="btn-group btn-group-xs">
+							<a class="btn btn-info" ng-href="#/{{ queueName }}/{{ task.task_name }}">View logs</a>
+							<button class="btn btn-danger" ng-if="task.is_complete" ng-click="reRunTask(task)">Rerun</button>
+						</div>
 					</p>
 				</div>
 			</accordion-group>

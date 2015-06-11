@@ -19,6 +19,7 @@ class TaskState(ndb.Model):
     deferred_args = ndb.TextProperty()
     deferred_kwargs = ndb.TextProperty()
     deferred_at = ndb.DateTimeProperty(auto_now_add=True)
+    pickle = ndb.BlobProperty()
 
     request_log_ids = ndb.StringProperty(repeated=True)
 
@@ -27,6 +28,10 @@ class TaskState(ndb.Model):
         if self.first_run is not None:
             return (datetime.datetime.utcnow() - self.first_run).total_seconds()
 
+    def to_dict(self):
+        data = super(TaskState, self).to_dict()
+        del data['pickle']
+        return data
 
 class UniqueTaskMarker(ndb.Model):
     deferred_at = ndb.DateTimeProperty(auto_now_add=True)

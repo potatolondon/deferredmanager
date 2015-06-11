@@ -39,7 +39,8 @@ def defer(obj, *args, **kwargs):
         task_name=task.name,
         task_reference=task_reference,
         unique=unique,
-        queue_name=kwargs.get('_queue', 'default')
+        queue_name=kwargs.get('_queue', 'default'),
+        pickle=pickled_obj
     )
 
     try:

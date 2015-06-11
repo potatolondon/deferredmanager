@@ -52,10 +52,22 @@ deferredApp.controller('QueueCtrl', function($scope, $http, $timeout, appSetting
 	$scope.queue = {};
 	$scope.getTasks = getTasks;
 	$scope.loadMoreTasks = loadMoreTasks;
+	$scope.getTaskStatusMsg = getTaskStatusMsg;
+	$scope.purgeQueue = purgeQueue;
+	$scope.reRunTask = reRunTask;
+
+	$scope.$watchCollection('[autorefresh, refreshInterval]', function(val) {
+		if ($scope.autorefresh) {
+			getTasks();
+		}
+		else if ($scope.queue) {
+			clearTimeout($scope.queue.timeoutID);
+		}
+	});
 
 	getTasks($scope.queue);
 
-	$scope.getTaskStatusMsg = function(task) {
+	function getTaskStatusMsg(task) {
 		if (task.was_purged) {
 			return 'purged';
 		}
@@ -84,24 +96,15 @@ deferredApp.controller('QueueCtrl', function($scope, $http, $timeout, appSetting
 			}
 			return 'pending';
 		}
-	};
+	}
 
-	$scope.purgeQueue = function() {
+	function purgeQueue() {
 		$http
 			.delete(appSettings.apiRootUrl + $scope.queueName)
 			.then(function () {
 				$timeout(getTasks, 800);
 			});
-	};
-
-	$scope.$watchCollection('[autorefresh, refreshInterval]', function(val) {
-		if ($scope.autorefresh) {
-			getTasks();
-		}
-		else if ($scope.queue) {
-			clearTimeout($scope.queue.timeoutID);
-		}
-	});
+	}
 
 	function setOldestEtaDelta() {
 		if ($scope.queue && $scope.queue.stats && $scope.queue.stats.oldest_eta) {
@@ -173,9 +176,16 @@ deferredApp.controller('QueueCtrl', function($scope, $http, $timeout, appSetting
 			task.displayText += (' (' + task.task_reference + ')');
 		}
 	}
+
+	function reRunTask(task) {
+		$http.post(appSettings.apiRootUrl + task.queue_name + '/' + task.task_name + '/rerun')
+		.then(function() {
+			$timeout(getTasks, 800);
+		});
+	}
 });
 
-deferredApp.controller('TaskCtrl', function($scope, $routeParams, $http, $q, appSettings) {
+deferredApp.controller('TaskCtrl', function($scope, $timeout, $location, $routeParams, $http, $q, appSettings) {
 	var ctlr = this;
 
 	this.queueId = $routeParams.queueId;
@@ -183,12 +193,20 @@ deferredApp.controller('TaskCtrl', function($scope, $routeParams, $http, $q, app
 
 	$scope.logs = [];
 	$scope.logLevels = LOG_LEVELS;
+	$scope.reRunTask = reRunTask;
 
-	$http.get(appSettings.apiRootUrl + this.queueId + '/' + this.taskId)
+	$http.get(appSettings.apiRootUrl + ctlr.queueId + '/' + ctlr.taskId)
 		.then(function(resp) {
 			$scope.task = resp.data.task;
 			$scope.logs = resp.data.logs;
 		});
+
+	function reRunTask(task) {
+		$http.post(appSettings.apiRootUrl + task.queue_name + '/' + task.task_name + '/rerun')
+		.then(function() {
+			$location.path("/");
+		});
+	}
 });
 
 deferredApp.controller('LogCtrl', function($scope, $routeParams, $http, $q, appSettings) {
