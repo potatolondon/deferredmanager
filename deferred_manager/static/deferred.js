@@ -203,8 +203,13 @@ deferredApp.controller('TaskCtrl', function($scope, $timeout, $location, $routeP
 
 	function reRunTask(task) {
 		$http.post(appSettings.apiRootUrl + task.queue_name + '/' + task.task_name + '/rerun')
-		.then(function() {
-			$location.path("/");
+		.then(function(resp) {
+			if (resp.data.task_id) {
+				$location.path("/" + task.queue_name + "/" + resp.data.task_id);
+			}
+			else {
+				console.error('Could not re-run task. A task with the same reference is already running and the task has been marked as unique.');
+			}
 		});
 	}
 });

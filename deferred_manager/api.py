@@ -156,7 +156,7 @@ class ReRunTaskHandler(webapp2.RequestHandler):
 
         fn, args, kwargs = pickle.loads(task_state.pickle)
 
-        defer(
+        new_task = defer(
             fn,
             unique=task_state.unique,
             task_reference=task_state.task_reference,
@@ -166,6 +166,7 @@ class ReRunTaskHandler(webapp2.RequestHandler):
 
         self.response.content_type = "application/json"
         self.response.write(dump({
+            "task_id": new_task.task_name if new_task else None,
             "message": "Re-running task"
         }))
 
