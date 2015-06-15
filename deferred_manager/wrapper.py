@@ -32,11 +32,7 @@ def defer(obj, *args, **kwargs):
     # the arguments
     pickled_obj = deferred.serialize(obj, *args, **obj_kwargs)
 
-    task = deferred.defer(task_wrapper, pickled_obj, task_reference, **defer_kwargs)
-
     task_state = TaskState(
-        id=task.name,
-        task_name=task.name,
         task_reference=task_reference,
         unique=unique,
         queue_name=kwargs.get('_queue', 'default'),
@@ -50,5 +46,7 @@ def defer(obj, *args, **kwargs):
     except:
         pass
     task_state.put()
+
+    task = deferred.defer(task_wrapper, task_state.key.id(), pickled_obj, task_reference, **defer_kwargs)
 
     return task_state

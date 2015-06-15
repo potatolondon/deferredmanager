@@ -15,10 +15,10 @@ class TaskWrapper(object):
     def __init__(self):
         self.all_queue_info = get_queue_info().queue
 
-    def __call__(self, obj, task_reference):
+    def __call__(self, task_state_key, obj, task_reference):
         fn, fn_args, fn_kwargs = pickle.loads(obj)
 
-        task_state = self.get_task_state()
+        task_state = self.get_task_state(task_state_key)
         if not task_state:
             logging.warning(
                 "No task state present for task {0}"
@@ -63,14 +63,15 @@ class TaskWrapper(object):
 
     @staticmethod
     @ndb.transactional
-    def get_task_state():
-        task_name = os.environ['HTTP_X_APPENGINE_TASKNAME']
-        task_state = TaskState.get_by_id(task_name)
+    def get_task_state(task_state_key):
+        task_state = TaskState.get_by_id(task_state_key)
 
         if not task_state:
             return
 
         task_state.is_running = True
+        task_state.task_name = os.environ['HTTP_X_APPENGINE_TASKNAME']
+
         task_state.retry_count = int(os.environ['HTTP_X_APPENGINE_TASKEXECUTIONCOUNT'])
 
         if task_state.request_log_ids is None:

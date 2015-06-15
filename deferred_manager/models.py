@@ -4,7 +4,7 @@ from google.appengine.ext import ndb
 
 
 class TaskState(ndb.Model):
-    task_name = ndb.StringProperty(required=True)
+    task_name = ndb.StringProperty()
     task_reference = ndb.StringProperty(required=False)
     queue_name = ndb.StringProperty(required=True)
 
@@ -31,6 +31,7 @@ class TaskState(ndb.Model):
     def to_dict(self):
         data = super(TaskState, self).to_dict()
         del data['pickle']
+        data['key'] = self.key.id()
         return data
 
 class UniqueTaskMarker(ndb.Model):

@@ -120,11 +120,10 @@ class DeferTaskTests(BaseTest):
 class HandlerTests(BaseTest):
     @staticmethod
     def make_request(
-            task_name,
             queue_name,
             **kwargs):
         request_headers = {
-            "X-AppEngine-TaskName": task_name,
+            "X-AppEngine-TaskName": 'dummy-task-name',
             "X-AppEngine-QueueName": queue_name,
         }
 
@@ -135,7 +134,7 @@ class HandlerTests(BaseTest):
 
         os.environ.update({
             "HTTP_X_APPENGINE_TASKEXECUTIONCOUNT": str(kwargs.pop('retries', 0)),
-            "HTTP_X_APPENGINE_TASKNAME": task_name,
+            "HTTP_X_APPENGINE_TASKNAME": 'dummy-task-name',
             "HTTP_X_APPENGINE_QUEUENAME": queue_name,
         })
 
@@ -151,6 +150,7 @@ class HandlerTests(BaseTest):
 
         task_pickle = deferred.serialize(
             task_wrapper,
+            task_state.key.id(),
             deferred.serialize(fn, *args, **strip_defer_kwargs(kwargs)),
             kwargs['task_reference'],
         )
@@ -160,14 +160,13 @@ class HandlerTests(BaseTest):
         task_state, noop_pickle = self.create_task(
             noop, task_reference="project1")
 
-        request = self.make_request(
-            task_state.task_name, 'default', POST=noop_pickle)
+        request = self.make_request('default', POST=noop_pickle)
 
         response = request.get_response(application)
 
         self.assertEqual(response.status_int, 200)
 
-        task_state = TaskState.get_by_id(task_state.task_name)
+        task_state = TaskState.get_by_id(task_state.key.id())
         self.assertTrue(task_state.task_name)
         self.assertTrue(task_state.is_complete)
         self.assertFalse(task_state.is_running)
@@ -177,14 +176,13 @@ class HandlerTests(BaseTest):
         task_state, noop_pickle = self.create_task(
             noop_fail, task_reference="project1")
 
-        request = self.make_request(
-            task_state.task_name, 'default', POST=noop_pickle)
+        request = self.make_request('default', POST=noop_pickle)
 
         response = request.get_response(application)
 
         self.assertEqual(response.status_int, 500)
 
-        task_state = TaskState.get_by_id(task_state.task_name)
+        task_state = TaskState.get_by_id(task_state.key.id())
         self.assertFalse(task_state.is_complete)
         self.assertFalse(task_state.is_running)
         self.assertFalse(task_state.is_permanently_failed)
@@ -193,14 +191,13 @@ class HandlerTests(BaseTest):
         task_state, noop_pickle = self.create_task(
             noop, task_reference="project1")
 
-        request = self.make_request(
-            task_state.task_name, 'default', POST=noop_pickle, retries=2)
+        request = self.make_request('default', POST=noop_pickle, retries=2)
 
         response = request.get_response(application)
 
         self.assertEqual(response.status_int, 200)
 
-        task_state = TaskState.get_by_id(task_state.task_name)
+        task_state = TaskState.get_by_id(task_state.key.id())
         self.assertEqual(task_state.retry_count, 2)
         self.assertTrue(task_state.is_complete)
         self.assertFalse(task_state.is_running)
@@ -217,13 +214,12 @@ class HandlerTests(BaseTest):
         )
         task_state.put()
 
-        request = self.make_request(
-            task_state.task_name, 'default', POST=noop_pickle, retries=8)
+        request = self.make_request('default', POST=noop_pickle, retries=8)
         response = request.get_response(application)
 
         self.assertEqual(response.status_int, 500)
 
-        task_state = TaskState.get_by_id(task_state.task_name)
+        task_state = TaskState.get_by_id(task_state.key.id())
         self.assertEqual(task_state.retry_count, 8)
         self.assertTrue(task_state.is_complete)
         self.assertFalse(task_state.is_running)
@@ -233,13 +229,12 @@ class HandlerTests(BaseTest):
         task_state, noop_pickle = self.create_task(
             noop_permanent_fail, task_reference="project1")
 
-        request = self.make_request(
-            task_state.task_name, 'default', POST=noop_pickle)
+        request = self.make_request('default', POST=noop_pickle)
         response = request.get_response(application)
 
         self.assertEqual(response.status_int, 200)
 
-        task_state = TaskState.get_by_id(task_state.task_name)
+        task_state = TaskState.get_by_id(task_state.key.id())
         self.assertEqual(task_state.retry_count, 0)
         self.assertTrue(task_state.is_complete)
         self.assertFalse(task_state.is_running)
@@ -249,7 +244,7 @@ class HandlerTests(BaseTest):
         task_state, noop_pickle = self.create_task(noop, task_reference="project1")
         task_state.key.delete()
 
-        request = self.make_request('task1', 'default', POST=noop_pickle)
+        request = self.make_request('default', POST=noop_pickle)
 
         response = request.get_response(application)
 

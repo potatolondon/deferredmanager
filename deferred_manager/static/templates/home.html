@@ -39,7 +39,7 @@
 				</accordion-heading>
 				<div class="task__info">
 					<p>
-						Task ID: {{task.task_name}}
+						Task name: {{task.task_name}}
 					</p>
 					<p ng-show="task.task_reference">
 						Deferred at: {{task.task_reference}}
@@ -58,7 +58,7 @@
 					</p>
 					<p>
 						<div class="btn-group btn-group-xs">
-							<a class="btn btn-info" ng-href="#/{{ queueName }}/{{ task.task_name }}">View logs</a>
+							<a class="btn btn-info" ng-href="#/{{ queueName }}/{{ task.key }}">View logs</a>
 							<button class="btn btn-danger" ng-if="task.is_complete" ng-click="reRunTask(task)">Rerun</button>
 						</div>
 					</p>

@@ -123,8 +123,8 @@ class QueueHandler(webapp2.RequestHandler):
 
 
 class TaskInfoHandler(webapp2.RequestHandler):
-    def get(self, queue_name, task_name):
-        task_state = TaskState.get_by_id(task_name)
+    def get(self, queue_name, task_id):
+        task_state = TaskState.get_by_id(int(task_id))
 
         if not task_state:
             self.response.set_status(404)
@@ -143,8 +143,8 @@ class TaskInfoHandler(webapp2.RequestHandler):
         self.response.write(dump(ctx))
 
 class ReRunTaskHandler(webapp2.RequestHandler):
-    def post(self, queue_name, task_name):
-        task_state = TaskState.get_by_id(task_name)
+    def post(self, queue_name, task_id):
+        task_state = TaskState.get_by_id(int(task_id))
 
         self.response.content_type = "application/json"
         if not task_state:
@@ -172,7 +172,7 @@ class ReRunTaskHandler(webapp2.RequestHandler):
 
         if new_task:
             self.response.write(dump({
-                "task_id": new_task.task_name,
+                "task_id": new_task.key.id(),
                 "message": "Re-running task"
             }))
         else:
