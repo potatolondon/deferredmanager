@@ -47,6 +47,6 @@ def defer(obj, *args, **kwargs):
         pass
     task_state.put()
 
-    task = deferred.defer(task_wrapper, task_state.key.id(), pickled_obj, task_reference, **defer_kwargs)
+    task = deferred.defer(task_wrapper, task_state.key.id(), pickled_obj, task_reference, _transactional=True, **defer_kwargs)
 
     return task_state
