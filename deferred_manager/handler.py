@@ -19,10 +19,6 @@ class TaskWrapper(object):
         fn, fn_args, fn_kwargs = pickle.loads(obj)
 
         task_state = self.get_task_state(task_state_key)
-        if not task_state:
-            logging.warning(
-                "No task state present for task {0}"
-                .format(get_func_repr(fn)))
 
         try:
             fn(*fn_args, **fn_kwargs)
@@ -67,7 +63,10 @@ class TaskWrapper(object):
         task_state = TaskState.get_by_id(task_state_key)
 
         if not task_state:
-            return
+            raise deferred.SingularTaskFailure(
+                "Task with ID {0} has no task state. This shouldn't happen. "
+                "Task will retry if queue is set to allow retries.".format(task_state_key)
+            )
 
         if task_state.is_running:
             raise deferred.PermanentTaskFailure(
