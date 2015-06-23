@@ -76,6 +76,14 @@ class TaskWrapper(object):
                     task_state)
             )
 
+        if task_state.is_complete:
+            raise deferred.PermanentTaskFailure(
+                "Task with ID {0} is marked as complete. "
+                "GAE may have fired the same task more than once. "
+                "See https://cloud.google.com/appengine/docs/python/taskqueue/#Python_Task_names".format(
+                    task_state)
+            )
+
         task_state.is_running = True
         task_state.task_name = os.environ['HTTP_X_APPENGINE_TASKNAME']
 
