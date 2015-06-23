@@ -42,3 +42,7 @@ Optionally, you can pass the following arguments:
 ## Task console
 
 The task console can be found at /_ah/deferredconsole/static/index.html
+
+## License
+
+MIT license, see COPYING for details.
