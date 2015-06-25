@@ -3,18 +3,15 @@ from . import api
 
 
 class HomeHandler(webapp2.RequestHandler):
-    def get(self):
-        url = self.request.url
-        if not url.endswith("/"):
-            url += "/"
-        self.redirect(url + 'static/index.html')
+    def get(self, prefix):
+        self.redirect(prefix + '/deferredconsole/static/index.html')
 
 
 application = webapp2.WSGIApplication([
-    (r'.+/api/logs/([\w\d-]+)', api.LogHandler),
-    (r'.+/api/([\w\d-]+)/([\w\d-]+)/rerun', api.ReRunTaskHandler),
-    (r'.+/api/([\w\d-]+)/([\w\d-]+)', api.TaskInfoHandler),
-    (r'.+/api/([\w\d-]+)', api.QueueHandler),
-    (r'.+/api.*', api.QueueListHandler),
-    (r'.*', HomeHandler),
+    (r'.+/deferredconsole/api/logs/([\w\d-]+)', api.LogHandler),
+    (r'.+/deferredconsole/api/([\w\d-]+)/([\w\d-]+)/rerun', api.ReRunTaskHandler),
+    (r'.+/deferredconsole/api/([\w\d-]+)/([\w\d-]+)', api.TaskInfoHandler),
+    (r'.+/deferredconsole/api/([\w\d-]+)', api.QueueHandler),
+    (r'.+/deferredconsole/api.*', api.QueueListHandler),
+    (r'(.+)/deferredconsole.*', HomeHandler),
 ])
