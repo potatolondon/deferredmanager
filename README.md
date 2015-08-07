@@ -6,9 +6,10 @@ GAE Defer Manager (ALPHA)
 gae_defer_manager is a wrapper for the deferred library in the Google App Engine SDK to expose the following functionality:
 
 * Task status
-* Task ETA
-* Allows prevention on duplicate tasks from being added based on an arbitrary reference key
+* Allows prevention of duplicate tasks from being queued based on an arbitrary reference key
 * Allows tasks to be re-run
+
+Note - a 'unique' task is treated as unique within the currently queued tasks. This wrapper does not prevent tasks with that reference from ever executing again. 
 
 ## Setup
 
